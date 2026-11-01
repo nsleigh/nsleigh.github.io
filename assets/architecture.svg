@@ -2,14 +2,19 @@
 <style>
 .ink{fill:#1f2328}.quiet{fill:#59636e}.edge{stroke:#8c959f}.bg{fill:#ffffff}
 .tint{fill:#f6f8fa;stroke:#8c959f}.main{fill:#0969da;fill-opacity:.12;stroke:#0969da;stroke-width:2}
-.plain{fill:none;stroke:#8c959f;stroke-width:1.25}.arrowhead{fill:#8c959f}
+.plain{fill:none;stroke:#8c959f;stroke-width:1.25}.arrowhead{fill:#8c959f}.line{stroke:#8c959f}
+@media (prefers-color-scheme: dark){
+.ink{fill:#e6edf3}.quiet{fill:#9198a1}.bg{fill:none}
+.tint{fill:#262a30;stroke:#6e7681}.main{fill:#4493f8;stroke:#4493f8;fill-opacity:.18}
+.plain{stroke:#6e7681}.arrowhead{fill:#6e7681}.line{stroke:#6e7681}
+}
 </style>
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead"/></marker></defs>
 <rect width="760" height="344" class="bg"/>
 <text x="24" y="28" font-size="15" font-weight="600" class="ink">Claude edits files and verifies through MCP</text>
 <rect x="24" y="52" width="520" height="268" rx="8" class="tint"/>
 <text x="40" y="76" font-weight="600" class="ink">Home Assistant OS (VM on Proxmox)</text>
-<g fill="none" stroke="#8c959f" stroke-width="1.25">
+<g fill="none" class="line" stroke-width="1.25">
 <path d="M250 128H318" marker-end="url(#a)"/><path d="M423 168V232" marker-end="url(#a)"/><path d="M145 184V232" marker-end="url(#a)"/>
 <path d="M250 260H318" marker-end="url(#a)"/><path d="M528 260H568" marker-end="url(#a)"/><path d="M200 96V86H652V96" marker-end="url(#a)"/>
 </g>

@@ -1,3 +1,15 @@
-theme: jekyll-theme-cayman
 title: Neil Sleightholm
 description: Home Assistant, home lab and other notes
+author:
+  name: Neil Sleightholm
+
+remote_theme: jekyll/minima@4de3223
+plugins:
+  - jekyll-remote-theme
+  - jekyll-feed
+  - jekyll-seo-tag
+
+minima:
+  skin: auto
+  nav_pages:
+    - home-assistant-claude-code.md

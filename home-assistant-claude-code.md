@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page
 title: Running Claude Code inside Home Assistant
 description: How I run Claude Code as a day-to-day admin assistant for a large Home Assistant setup
 ---
