@@ -1,3 +1,3 @@
-Creates page here https://nsleigh.github.io/
+Creates page here [https://nsleigh.github.io](https://nsleigh.github.io/)
 
-Instructions here: https://pages.github.com/
+Instructions here: [https://docs.github.com/en/pages](https://docs.github.com/en/pages)
