@@ -4,13 +4,13 @@ title: Running Claude Code inside Home Assistant
 description: How I run Claude Code as a day-to-day admin assistant for a large Home Assistant setup
 ---
 {% raw %}
-*Neil Sleightholm · 1 November 2026*
+*Neil Sleightholm · 7 November 2026 · [Updates](#updates)*
 
 [Claude Code](https://github.com/anthropics/claude-code), Anthropic's agentic coding CLI, runs as an app (formerly add-on) inside my Home Assistant install and works as a day-to-day admin assistant for a large setup (about 700 devices and 4,300 entities). It edits the live configuration, which is a git repo pushed to GitHub every night, and talks to Home Assistant and my network controller through MCP servers.
 
 This write-up covers how the pieces fit together, how each one is set up, the guard-rails that keep it safe, and real examples of tasks it has done.
 
-It's based on **Claude Terminal Pro 2.4.0**, with Claude Code 2.1.316, ha-mcp 9.0.0 and Home Assistant 2026.10.4. Later app releases may change menus and options.
+It's based on **Claude Terminal Pro 2.5.3**, with Claude Code 2.1.319, ha-mcp 9.1.1 and Home Assistant 2026.11.0. Later app releases may change menus and options.
 
 The installation as of 31 October 2026:
 
@@ -64,6 +64,10 @@ Three projects make up the core setup.
 
 The app is where I actually work with Claude: how it's set up, the settings I use, and the features I rely on day to day.
 
+![Claude Terminal Pro 2.5.3 in a desktop browser: asked "is HA ok", Claude calls ha-mcp five times and replies with a health summary (versions, config check, updates, Supervisor, Nabu Casa) and a list of recent errors and warnings, with the status line under the prompt](assets/screenshots/desktop.png)
+
+*The app in a desktop browser (2.5.3): asked "is HA ok", Claude checks the system through ha-mcp and summarises its health and recent warnings. The status line is under the prompt.*
+
 ### Installing
 
 **Requirements:** a paid Claude plan (Pro, Max, Team or Enterprise), or an Anthropic Console account with API billing (per token). Claude Code isn't included in the free plan. I'm on the Pro plan and log in through the browser. I use it a lot and have never needed to buy extra usage credit; keeping to one task per session (section 8) helps.
@@ -102,6 +106,14 @@ persistent_pip_packages:
 init_commands: []
 voice_stt_provider: ""                # voice input (new in 2.4.0), not set up yet
 voice_language: ""
+statusline:                           # the bar under Claude's prompt
+  - model
+  - context
+  - duration
+  - lines
+  - usage
+  - tokens
+home_assistant_plugin: true           # bundled HA plugin, on by default
 ```
 
 The ones I changed from the defaults, and why:
@@ -133,6 +145,12 @@ The rest are deliberately left at the defaults:
 
 The terminal is an HA sidebar panel, so it works anywhere Home Assistant does: a browser on a PC or Mac, or the HA Companion app on a phone or tablet, at home or over Tailscale. I use it from my phone quite often, e.g. to ask Claude why a light didn't come on while I'm standing in the room.
 
+**Keys for a phone.** A phone keyboard has none of the keys Claude Code relies on, so on a touch screen the app shows a row of them above the on-screen keyboard: **Esc** (stop Claude or close a menu), **↑ ↓** (menus and earlier prompts), **Tab** (accept a suggested prompt), **⇧Tab** (switch to plan or auto-accept mode), **^C**, **⇧↵** (a new line without sending) and **↵**. Tapping one keeps the keyboard open. **^C** is guarded: two in a row would quit Claude, which is an easy double tap on a phone, so after one tap it shows *wait* for two seconds. Together with the terminal resizing to sit above the keyboard, this is what made the phone usable for real work rather than just checking in.
+
+![Claude Terminal Pro on an iPhone: the toolbar with Files, Copy, Voice Input and Upload buttons, a new Claude Code session in /config, the status line, and the row of Esc, arrow, Tab, Shift+Tab, Ctrl+C, new-line and Enter keys at the bottom](assets/screenshots/iphone.jpeg){: width="400"}
+
+*On an iPhone: the toolbar, a new Claude session with the status line, and the row of keys at the bottom.*
+
 **Paste screenshots and files.** Cmd/Ctrl+V pastes a screenshot straight into the terminal. Drag-and-drop and the 📎 Upload button take any file: images, PDFs, YAML, logs, CSV. Each upload is saved to `/data/uploads` and its path is typed at the prompt, ready for a question. On an iPhone or iPad, 📎 opens Photos or the Files app. A screenshot of a broken dashboard card or a Repairs message is often the quickest way to show Claude the problem.
 
 **The Files sidebar: see what Claude changed.** The 🗂️ Files button opens a sidebar beside the terminal (full screen on a phone). It has four parts:
@@ -146,6 +164,8 @@ The terminal is an HA sidebar panel, so it works anywhere Home Assistant does: a
 
 The Changes tab is the one I use most. After Claude edits something, I can review the exact diff and undo a single file without going near git, and that works just as well on a phone. Because `/config` is already a git repo (section 6), the tab uses it directly: a checkpoint is a local commit, which the nightly job then pushes. The tab never lists, diffs or commits secrets, `.storage`, databases or keys, whatever `.gitignore` says.
 
+**The status line.** Under Claude's prompt the app shows a status bar, set with the `statusline` option. Mine shows the model, how full the context is, the session's duration, lines changed, plan usage and tokens, which tells me when it's time to start a new session (section 8). It can also show home pieces such as alerts, repairs, backups, disk space, updates and unavailable entities, or any sensor you name.
+
 **Remote Control (optional, not used here).** The app's *Enable Remote Control* option starts Claude with `--remote-control`. The same session then also appears as "Home Assistant" in the Claude mobile app and at [claude.ai/code](https://claude.ai/code), so you can drive it from another device without going through HA. It needs a normal claude.ai login (Pro, Max, Team or Enterprise), not an API key. If you turn it on, leave *Dangerously Skip Permissions* off: with both on, any device signed in to your Claude account can drive a root shell that runs tools without asking.
 
 ### The session picker
@@ -154,21 +174,9 @@ The session picker is the app's menu for starting Claude. With `auto_launch_clau
 
 The app's docs now have a [Session Picker section](https://github.com/ESJavadex/claude-code-ha/blob/main/claude-terminal/DOCS.md#session-picker) describing these options.
 
-```text
-Claude Code version: 2.1.316 (Claude Code)
+![Claude Terminal Pro in the Home Assistant sidebar: the session picker on the left, the ± Changes sidebar on the right listing files changed since the last checkpoint, with Accept all changes and Check HA configuration buttons](assets/screenshots/session-picker.png)
 
-Choose your Claude session type:
-
-  1) 🆕 New interactive session (default)
-  2) ⏩ Continue most recent conversation (-c)
-  3) 📋 Resume from conversation list (-r)
-  4) ⚙️ Custom Claude command (manual flags)
-  5) 🔐 Claude authentication helper
-  6) 🐙 GitHub CLI login (gh auth)
-  7) 🔄 Update Claude Code (2.1.316, up to date)
-  8) 🐚 Drop to bash shell
-  9) ❌ Exit
-```
+*The session picker, with the ± Changes sidebar open (app 2.4.8).*
 
 | Option | What it does | When I use it |
 | --- | --- | --- |
@@ -303,6 +311,7 @@ Claude Code keeps a per-project memory: one small Markdown file per fact, plus a
 | --- | --- | --- |
 | `reload-ha` | Repo (`.claude/skills/reload-ha/SKILL.md`) | Runs `homeassistant.check_config` and stops on errors. Otherwise calls `ha_reload_core` for the target (default: automations). |
 | `persistent-package-manager`, `/install`, `/install-python`, `/list-packages` | Claude Terminal Pro app | Installs system or Python packages that survive container rebuilds |
+| `/ha-check`, `/ha-upgrade`, `/ha-find-duplicates` | Claude Terminal Pro app (bundled `homeassistant-config` plugin) | Current HA syntax, a check of every YAML file Claude edits, whole-config and upgrade checks, duplicate automations and scripts |
 | `home-assistant-best-practices` | ha-mcp (`ha_get_skill_guide`) | Native triggers and conditions over Jinja, entity\_id over device\_id, the right automation mode, helpers vs. templates |
 
 **Installing the Spook plugin.** If you run the [Spook](https://github.com/frenck/spook) integration, add its plugin so Claude knows Spook's actions, triggers, conditions and repairs without reading all of its documentation. In Claude Code, run:
@@ -313,6 +322,14 @@ Claude Code keeps a per-project memory: one small Markdown file per fact, plus a
 ```
 
 The first command registers the Spook repo as a plugin marketplace; the second installs its single plugin, `spook`, which contains one skill. I've enabled it for the `/config` project, so it's listed in `/config/.claude/settings.json` and loads in every session there. More in Spook's [Using Spook with AI agents](https://github.com/frenck/spook#using-spook-with-ai-agents).
+
+**The bundled Home Assistant plugin.** The app now installs a `homeassistant-config` plugin for Claude Code ([ESJavadex/claude-homeassistant-plugins](https://github.com/ESJavadex/claude-homeassistant-plugins); option `home_assistant_plugin`, on by default). It teaches Claude current Home Assistant syntax, checks every YAML file Claude edits, and adds three commands:
+
+- `/ha-check` checks the whole config: YAML syntax, removed and deprecated syntax, dashboards, missing includes, undefined secrets and duplicate IDs, then runs HA's own config check.
+- `/ha-upgrade` lists what a Core upgrade deprecates or removes in your YAML.
+- `/ha-find-duplicates` finds duplicate, near-duplicate and conflicting automations and scripts.
+
+Their first runs here cleared deprecated dashboard card options and old-style YAML in automations, templates and a blueprint, in three commits. `/ha-find-duplicates` flagged my five radio scripts as near-duplicates; I kept them separate on purpose and recorded why in memory. The plugin only checks YAML, though. It doesn't look at custom integrations, which is where the 2026.11 upgrade actually broke things (section 7).
 
 ### Permissions
 
@@ -429,12 +446,12 @@ Three pieces: a shell command, a script and an automation.
 ```yaml
 # configuration.yaml
 shell_command:
-  pushupdatestogithub: /bin/bash /config/pushupdates.sh
+  pushupdatestogithub: /bin/bash /config/shell/pushupdates.sh
 ```
 
 ```bash
 #!/usr/bin/env bash
-# /config/pushupdates.sh
+# /config/shell/pushupdates.sh
 cd /config
 VERSION=$(cat .HA_VERSION)
 
@@ -629,6 +646,31 @@ What this example shows:
 - **Independent sources that agree.** HA history showed what changed, and the app log showed what the device did and didn't report. The UPS sensors confirmed the effect, and a second UPS in the same room ruled out the mains.
 - **Checking for false patterns.** Claude checked the earlier on-battery event before calling this a repeat fault, and found it had a different cause.
 
+### Worked example: four integrations broken by the 2026.11 upgrade
+
+Home Assistant 2026.11.0 came out on 4 November and I upgraded the same day. Four custom integrations broke. For each one, Claude read the startup log through ha-mcp, found the line of the integration's code that the release had broken, and searched the integration's GitHub issues before changing anything.
+
+- **A car's cloud integration**
+  - **Symptom:** setup retried forever and every car entity was unavailable.
+  - **Cause:** HA's shared HTTP client now accepts zstd compression, and the car maker's API labels its replies as zstd when they aren't valid zstd, so decoding failed.
+  - **Outcome:** patched live with a dedicated client. I then tested an open upstream PR and suggested reusing the client across reloads; its author adopted that the same day.
+- **A smart lock's cloud integration**
+  - **Symptom:** the lock's state was stuck at `unknown`, so the "door unlocked" automation couldn't fire.
+  - **Cause:** `DeviceInfo` is no longer a plain dict, and the integration called `.pop()` on it.
+  - **Outcome:** patched live, then replaced by the upstream fix a day later.
+- **Mixergy**
+  - **Symptom:** the whole sensor platform was missing: hot water temperature, charge and holiday mode.
+  - **Cause:** a core class it subclasses had gained a required argument.
+  - **Outcome:** patched live and sent upstream as a PR, which was released in 0.9.4 two days later.
+- **Hive**
+  - **Symptom:** Spook raised repairs on the heating and hot water boost scripts.
+  - **Cause:** core had moved Hive's boost services, and because the custom integration replaces core's Hive domain, the services vanished.
+  - **Outcome:** patched live and sent upstream as a PR.
+
+`custom_components/` isn't in git, and an update would silently overwrite a live patch, so Claude records each one in memory with what to check upstream before updating.
+
+**The lesson.** Two of the four, the car and the lock, had been reported on their issue trackers during the 2026.11 beta, a week before the release. Searching each custom integration's issues for the target version and its beta would have caught them before I upgraded. I now ask Claude to do that before every Core upgrade (`gh search issues --repo <owner>/<repo> "2026.12"`), and I've suggested it as a check for the HA plugin.
+
 ### Writing and refactoring config
 
 - Split the bulk of the automations out of `automations.yaml` into category files, moving each block verbatim with its `id:` so entity IDs and state carried over.
@@ -669,7 +711,7 @@ Before you open a PR or issue yourself, read "Upstream PRs are your responsibili
 3. **Read through MCP, write through files.** Keeping YAML as the source of truth wherever it exists, and ha-mcp as the way to verify, keeps changes reviewable in git.
 4. **Validate, make a targeted reload, then check the trace.** Following that loop every time avoids surprise restarts.
 5. **Least privilege for every MCP server.** Use read-only controller accounts, keep `.mcp.json` gitignored, and don't expose unauthenticated endpoints for convenience.
-6. **Watch the container.** App base-image upgrades (Alpine or Python bumps) can affect persisted packages. 2.4.0 rebuilt them automatically, but check that your MCP servers still start afterwards.
+6. **Watch the container.** App base-image upgrades (Alpine or Python bumps) can affect persisted packages. The 2.4.0 update rebuilt them automatically, but check that your MCP servers still start afterwards.
 7. **Small commits.** One logical change per commit with a clear message makes it easy to see what Claude did, and to revert it.
 8. **Upstream PRs are your responsibility.** Claude can write the fix and the PR description, but you're the one submitting it. Read every line, test it on your own system, and be ready to explain and maintain it. Check each project's contribution rules before you open anything: some repos don't accept AI-generated issues or PRs, or have paused outside contributions altogether.
 9. **One task per session.** I work on one thing, exit, and start a new session for the next. Every message resends the whole conversation, so a long session uses more tokens (and more of a subscription's usage limit) with each request, and a very long one gets auto-compacted, which can drop detail. A short session stays cheap and focused, and each resumable conversation stays about one thing. To go back to something, I resume it from the session picker (option 3). If Claude's auto-generated session name won't make sense in that list later, I rename it with `/rename`.
@@ -681,4 +723,13 @@ I'm Neil, retired after a 40-year career in IT and software engineering. These d
 I've run Home Assistant since December 2020, for most of that time as a VMware VM and now on Proxmox. In May 2026 I started using Claude Code as a day-to-day admin assistant for the house. My setup integrates Zigbee, Z-Wave, Thread/Matter (through a SkyConnect running the OpenThread Border Router add-on), ESPHome and energy monitoring.
 
 I contribute to Claude Terminal Pro, and I send fixes upstream to the custom integrations and devices I rely on.
+
+## Updates {#updates}
+
+**7 November 2026**
+
+- Updated for Claude Terminal Pro 2.5.3 and Home Assistant 2026.11.
+- Added the bundled Home Assistant plugin (`/ha-check`, `/ha-upgrade`, `/ha-find-duplicates`).
+- New worked example: four custom integrations broken by the 2026.11 upgrade, and how checking their issue trackers would have caught two of them.
+- Added the phone key bar and the status line, with screenshots from a desktop browser and an iPhone.
 {% endraw %}
