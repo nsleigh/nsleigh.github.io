@@ -19,7 +19,7 @@ The installation as of 31 October 2026:
 | Devices (enabled) | 699 |
 | Entities (enabled, of 9,344 registered) | 4,268 |
 | Integrations (config entries) | 110 (238) |
-| HACS repositories installed | 52 |
+| Marketplace (HACS) repositories installed | 52 |
 | Apps | 21 |
 | Zigbee devices (ZHA) | 38 |
 | Z-Wave nodes | 39 |
@@ -416,7 +416,7 @@ secrets.yaml
 - `!*.js*` also re-includes `*.json`. That's why `.mcp.json` is excluded explicitly at the end. Integrations that write token caches into their own folders need a folder-level exclude too (e.g. `ms365_storage/*`).
 - `esphome/secrets.yaml` is covered twice: by the root rule (no leading slash matches at any depth) and by the `esphome/.gitignore` the ESPHome app creates.
 - `.storage/` holds UI-created config and credentials, so it's never tracked. Section 6.3 shows how UI dashboards still get history.
-- `custom_components/` (HACS) is excluded because HACS can reinstall it. Patched integrations live in their own forks.
+- `custom_components/` (Marketplace) is excluded because Marketplace can reinstall it. Patched integrations live in their own forks.
 
 Step 5:
 
@@ -732,4 +732,5 @@ I contribute to Claude Terminal Pro, and I send fixes upstream to the custom int
 - Added the bundled Home Assistant plugin (`/ha-check`, `/ha-upgrade`, `/ha-find-duplicates`).
 - New worked example: four custom integrations broken by the 2026.11 upgrade, and how checking their issue trackers would have caught two of them.
 - Added the phone key bar and the status line, with screenshots from a desktop browser and an iPhone.
+- HACS is now called Marketplace (renamed in Home Assistant 2026.11).
 {% endraw %}
