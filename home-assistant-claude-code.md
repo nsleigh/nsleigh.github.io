@@ -4,13 +4,26 @@ title: Running Claude Code inside Home Assistant
 description: How I run Claude Code as a day-to-day admin assistant for a large Home Assistant setup
 ---
 {% raw %}
-*Neil Sleightholm · 7 November 2026 · [Updates](#updates)*
+*Neil Sleightholm · 24 November 2026 · [Updates](#updates)*
 
 [Claude Code](https://github.com/anthropics/claude-code), Anthropic's agentic coding CLI, runs as an app (formerly add-on) inside my Home Assistant install and works as a day-to-day admin assistant for a large setup (about 700 devices and 4,300 entities). It edits the live configuration, which is a git repo pushed to GitHub every night, and talks to Home Assistant and my network controller through MCP servers.
 
 This write-up covers how the pieces fit together, how each one is set up, the guard-rails that keep it safe, and real examples of tasks it has done.
 
-It's based on **Claude Terminal Pro 2.5.3**, with Claude Code 2.1.319, ha-mcp 9.1.1 and Home Assistant 2026.11.0. Later app releases may change menus and options.
+**Contents**
+
+- [1. The big picture](#big-picture)
+- [2. Components](#components)
+- [3. The Claude Terminal Pro app](#app)
+- [4. MCP servers](#mcp-servers)
+- [5. Teaching Claude about this house](#teaching-claude)
+- [6. Version control: /config as a git repo with a nightly push](#version-control)
+- [7. Example tasks](#example-tasks)
+- [8. Lessons learned](#lessons-learned)
+- [About the author](#about-the-author)
+- [Updates](#updates)
+
+It's based on **Claude Terminal Pro 2.5.7**, with Claude Code 2.1.330, ha-mcp 9.2.0 and Home Assistant 2026.11.2. Later app releases may change menus and options.
 
 The installation as of 31 October 2026:
 
@@ -31,7 +44,7 @@ The installation as of 31 October 2026:
 | Areas (floors) | 21 (4) |
 | Recorder database (15-day retention) | about 1.5 GB |
 
-## 1. The big picture
+## 1. The big picture {#big-picture}
 
 Claude Code works on the config files directly and uses MCP servers to see and verify what Home Assistant is actually doing.
 
@@ -43,7 +56,7 @@ Three layers work together:
 2. **Runtime.** The ha-mcp server gives Claude live access to Home Assistant: entity states, history, logs, automation traces, service calls, dashboards and helpers.
 3. **Guard-rails.** A project `CLAUDE.md`, persistent memory, custom skills and a permission allow-list keep Claude's behaviour consistent and safe between sessions.
 
-## 2. Components
+## 2. Components {#components}
 
 Three projects make up the core setup.
 
@@ -60,7 +73,7 @@ Three projects make up the core setup.
 | unifi-network-mcp | An MCP server for the UniFi Network controller: clients, devices, firewall, stats (section 4) | [sirkirby/unifi-mcp](https://github.com/sirkirby/unifi-mcp) (PyPI: `unifi-network-mcp`) |
 | Spook (HA integration + Claude Code plugin) | A custom integration that finds "ghosts" (references to things that no longer exist) and adds 100+ extra actions. Its Claude Code plugin is a skill that teaches Claude how to use them and fix the repairs it raises. See [Using Spook with AI agents](https://github.com/frenck/spook#using-spook-with-ai-agents); install steps in section 5. | [frenck/spook](https://github.com/frenck/spook) |
 
-## 3. The Claude Terminal Pro app
+## 3. The Claude Terminal Pro app {#app}
 
 The app is where I actually work with Claude: how it's set up, the settings I use, and the features I rely on day to day.
 
@@ -153,6 +166,8 @@ The terminal is an HA sidebar panel, so it works anywhere Home Assistant does: a
 
 **Paste screenshots and files.** Cmd/Ctrl+V pastes a screenshot straight into the terminal. Drag-and-drop and the 📎 Upload button take any file: images, PDFs, YAML, logs, CSV. Each upload is saved to `/data/uploads` and its path is typed at the prompt, ready for a question. On an iPhone or iPad, 📎 opens Photos or the Files app. A screenshot of a broken dashboard card or a Repairs message is often the quickest way to show Claude the problem.
 
+**The Paste button.** A phone has no paste key, so release 2.5.7 added 📥 Paste next to Copy in the header. Over HTTPS it pastes the clipboard straight away, and a copied image is uploaded as with 📎. On an iPhone, tap a new screenshot's thumbnail, then ✓ → Copy and Delete, then 📥: the screenshot reaches Claude without being saved to Photos. Over plain HTTP, where browsers block clipboard reads, it opens a box to paste into instead.
+
 **The Files sidebar: see what Claude changed.** The 🗂️ Files button opens a sidebar beside the terminal (full screen on a phone). It has four parts:
 
 | Part | What it does |
@@ -194,7 +209,7 @@ For `gh`, the token method suggests the `repo`, `read:org` and `workflow` scopes
 
 How I use it: one task per session. When a task is done I exit, which brings back the picker, and start a new session (1) for the next thing. To pick up earlier work I use Resume (3), and `/rename` any session whose name won't be clear in that list later.
 
-## 4. MCP servers
+## 4. MCP servers {#mcp-servers}
 
 Two MCP servers are connected (ha-mcp is the core one; unifi-network-mcp is optional, see section 2), declared in a project-level `.mcp.json` in `/config`. That file is gitignored because it holds connection details and credentials.
 
@@ -244,7 +259,7 @@ ha-mcp **can't read automations defined in YAML files** (the UI editor treats th
 
 The ESPHome Device Builder now ships its own MCP endpoint. Inside an app, the only way to reach it from another container today is to open port 6052 **without authentication**, which gives host-level access (external components can run arbitrary Python). I'm waiting for upstream auth support. Until then Claude edits `esphome/*.yaml` directly.
 
-## 5. Teaching Claude about this house
+## 5. Teaching Claude about this house {#teaching-claude}
 
 Four layers carry knowledge between sessions: a checked-in `CLAUDE.md`, persistent memory, skills, and a permission allow-list.
 
@@ -339,7 +354,7 @@ A `.claude/settings.local.json` allow-list pre-approves safe, repetitive calls: 
 
 **Proposals before edits.** For bigger or riskier changes I often ask for a proposal first, e.g. "propose a fix, don't edit anything yet". I review the plan, push back or adjust it, and only then let Claude change files. Plan mode (also on Shift+Tab) does the same thing more formally: Claude researches and writes a plan, and edits nothing until you approve it.
 
-## 6. Version control: /config as a git repo with a nightly push
+## 6. Version control: /config as a git repo with a nightly push {#version-control}
 
 The whole `/config` folder is a git working tree, backed by a **private** GitHub repo and pushed every night at 01:00. It's the most important safety net when an AI agent can edit the live configuration:
 
@@ -531,7 +546,7 @@ Only `.data.config` is kept, without the storage wrapper. Dashboard edits made t
 - **It never stages** `secrets.yaml`, `.storage/`, `*.db` or `.mcp.json`, and never puts shareable files in `/config/www`, which is both pushed and served over HTTP.
 - **Other tools commit too.** The ESPHome Device Builder auto-commits its own edits as `Edit <file>`, and those are left as they are.
 
-## 7. Example tasks
+## 7. Example tasks {#example-tasks}
 
 These are real tasks from recent sessions, with identifying details removed.
 
@@ -714,9 +729,10 @@ Before you open a PR or issue yourself, read "Upstream PRs are your responsibili
 6. **Watch the container.** App base-image upgrades (Alpine or Python bumps) can affect persisted packages. The 2.4.0 update rebuilt them automatically, but check that your MCP servers still start afterwards.
 7. **Small commits.** One logical change per commit with a clear message makes it easy to see what Claude did, and to revert it.
 8. **Upstream PRs are your responsibility.** Claude can write the fix and the PR description, but you're the one submitting it. Read every line, test it on your own system, and be ready to explain and maintain it. Check each project's contribution rules before you open anything: some repos don't accept AI-generated issues or PRs, or have paused outside contributions altogether.
-9. **One task per session.** I work on one thing, exit, and start a new session for the next. Every message resends the whole conversation, so a long session uses more tokens (and more of a subscription's usage limit) with each request, and a very long one gets auto-compacted, which can drop detail. A short session stays cheap and focused, and each resumable conversation stays about one thing. To go back to something, I resume it from the session picker (option 3). If Claude's auto-generated session name won't make sense in that list later, I rename it with `/rename`.
+9. **Approve anything that goes public.** At home, Claude asks before anything destructive. But a PR, issue or comment on GitHub is public the moment it's posted. Once, Claude opened an upstream PR straight after a quick test, before I'd agreed, and I had to close it. Now a rule in memory says: prepare and draft, then ask me before every PR, issue or comment, on any repo, my own included.
+10. **One task per session.** I work on one thing, exit, and start a new session for the next. Every message resends the whole conversation, so a long session uses more tokens (and more of a subscription's usage limit) with each request, and a very long one gets auto-compacted, which can drop detail. A short session stays cheap and focused, and each resumable conversation stays about one thing. To go back to something, I resume it from the session picker (option 3). If Claude's auto-generated session name won't make sense in that list later, I rename it with `/rename`.
 
-## About the author
+## About the author {#about-the-author}
 
 I'm Neil, retired after a 40-year career in IT and software engineering. These days I run a privacy-first home lab built on Proxmox VE, a segmented UniFi network and Tailscale-only remote access. Home Assistant sits at the centre of it.
 
@@ -725,6 +741,13 @@ I've run Home Assistant since December 2020, for most of that time as a VMware V
 I contribute to Claude Terminal Pro, and I send fixes upstream to the custom integrations and devices I rely on.
 
 ## Updates {#updates}
+
+**24 November 2026**
+
+- Updated for Claude Terminal Pro 2.5.7, Claude Code 2.1.330, ha-mcp 9.2.0 and Home Assistant 2026.11.2.
+- Added the 📥 Paste button from Claude Terminal Pro 2.5.7.
+- New lesson: approve anything that goes public.
+- Added a contents list.
 
 **7 November 2026**
 
